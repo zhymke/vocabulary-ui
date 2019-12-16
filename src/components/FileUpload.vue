@@ -1,6 +1,11 @@
 <template>
   <b-row class="m-3">
     <b-col sm="6">
+      <b-alert
+        :show="showAlert"
+        variant="danger"
+        dismissible
+      >{{this.errorText}}</b-alert>
       <b-form-file
         class="mt-2"
         multiple
@@ -15,13 +20,24 @@
           <b-list-group-item v-for="file in files" v-bind:key="file.name" class="sm">{{ file.name }}</b-list-group-item>
         </b-list-group>
       </div>
-      <b-button variant="primary" class="float-right mt-2" @click="upload">Upload</b-button>
+      <b-button variant="primary" class="float-right mt-2" @click="upload" :disabled="this.loading || !this.files">
+        <b-spinner v-if="this.loading" small type="grow"></b-spinner>Upload
+      </b-button>
     </b-col>
     <b-col>
       <div>
         <b-tabs content-class="mt-3">
           <b-tab title="A-G" active>
-            <b-table striped hover :items="aGitems" responsive id="a-g-table" :per-page="perPage" :current-page="aGcurrentPage" :fields="fields"></b-table>
+            <b-table
+              striped
+              hover
+              :items="aGitems"
+              responsive
+              id="a-g-table"
+              :per-page="perPage"
+              :current-page="aGcurrentPage"
+              :fields="fields"
+            ></b-table>
             <b-pagination
               v-model="aGcurrentPage"
               :total-rows="aGrows"
@@ -30,7 +46,16 @@
             ></b-pagination>
           </b-tab>
           <b-tab title="H-N">
-            <b-table striped hover :items="hNitems" responsive id="h-n-table" :per-page="perPage" :current-page="hNcurrentPage" :fields="fields"></b-table>
+            <b-table
+              striped
+              hover
+              :items="hNitems"
+              responsive
+              id="h-n-table"
+              :per-page="perPage"
+              :current-page="hNcurrentPage"
+              :fields="fields"
+            ></b-table>
             <b-pagination
               v-model="hNcurrentPage"
               :total-rows="hNrows"
@@ -39,7 +64,16 @@
             ></b-pagination>
           </b-tab>
           <b-tab title="O-U">
-            <b-table striped hover :items="oUitems" responsive id="o-u-table" :per-page="perPage" :current-page="oUcurrentPage" :fields="fields"></b-table>
+            <b-table
+              striped
+              hover
+              :items="oUitems"
+              responsive
+              id="o-u-table"
+              :per-page="perPage"
+              :current-page="oUcurrentPage"
+              :fields="fields"
+            ></b-table>
             <b-pagination
               v-model="oUcurrentPage"
               :total-rows="oUrows"
@@ -77,6 +111,9 @@ export default {
   name: "FileUpload",
   data: function() {
     return {
+      loading: false,
+      errorText: null,
+      showAlert: false,
       files: null,
       perPage: 20,
       aGitems: null,
@@ -99,6 +136,9 @@ export default {
   },
   methods: {
     upload: function() {
+      this.showAlert = false;
+      this.loading = true;
+
       let thisRef = this;
       let formData = new FormData();
       this.files.forEach(file => formData.append("files", file));
@@ -107,21 +147,25 @@ export default {
         .post(process.env.VUE_APP_BACKEND_URL + "/vocabulary", formData, {
           headers: {
             "Content-Type": "multipart/form-data",
+            "Access-Control-Allow-Origin": process.env.VUE_APP_BACKEND_URL
           }
         })
         .then(function(data) {
-          
-          thisRef.aGitems = data.data['A-G'];
+          thisRef.aGitems = data.data["A-G"];
           thisRef.aGrows = thisRef.aGitems.length;
-          thisRef.hNitems = data.data['H-N'];
+          thisRef.hNitems = data.data["H-N"];
           thisRef.hNrows = thisRef.hNitems.length;
-          thisRef.oUitems = data.data['O-U'];
+          thisRef.oUitems = data.data["O-U"];
           thisRef.oUrows = thisRef.oUitems.length;
-          thisRef.vZitems = data.data['V-Z'];
+          thisRef.vZitems = data.data["V-Z"];
           thisRef.aGrows = thisRef.vZitems.length;
         })
-        .catch(function() {
-          console.log("FAILURE!!");
+        .catch(function(error) {
+          thisRef.errorText = error.response.data.message;
+          thisRef.showAlert = true;
+        })
+        .then(() => {
+          thisRef.loading = false;
         });
     }
   }
